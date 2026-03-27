@@ -118,7 +118,7 @@ def render_results(
 
     n_scenes = len(scene_analysis.scenes)
     n_backgrounds = n_scenes
-    n_objects = sum(len(scene.objects) for scene in scene_analysis.scenes)
+    n_events = sum(len(scene.audio_events) for scene in scene_analysis.scenes)
     n_raw = len(grouped.raw_tracks)
     n_groups = len(grouped.groups)
     n_multi = sum(1 for group in grouped.groups if len(group.member_ids) > 1)
@@ -138,7 +138,7 @@ def render_results(
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     c1.metric("🎬 씬 수", n_scenes)
     c2.metric("🌲 배경 트랙", n_backgrounds)
-    c3.metric("🎯 객체 트랙", n_objects)
+    c3.metric("🎯 이벤트 트랙", n_events)
     c4.metric("📦 Raw 트랙 수", n_raw)
     c5.metric(
         "🔗 최종 그룹 수",
@@ -275,10 +275,15 @@ def _render_group_expander(
                 model_icon = "🔵" if selection.model_type == "VTA" else "🟢"
                 conflict_flag = " ⚠️" if selection.confidence < 0.6 else ""
                 rule_tag = " ⚡규칙" if selection.rule_based else ""
+                reasoning_excerpt = (
+                    f"reasoning: {selection.reasoning[:60]}..."
+                    if selection.reasoning
+                    else ""
+                )
                 st.markdown(
                     f"{model_icon} **{selection.model_type}**{conflict_flag}{rule_tag}  \n"
                     f"conf: {selection.confidence:.0%}  \n"
-                    f"vta={selection.vta_score:.1f} / tta={selection.tta_score:.1f}"
+                    f"{reasoning_excerpt}"
                 )
                 if selection.confidence < 0.6:
                     st.caption("⚠️ 그룹 내 멤버 간 모델 이견 있음")
@@ -359,7 +364,6 @@ def _render_track_model_selection(track: RawTrack) -> None:
     rule_tag = " ⚡규칙" if selection.rule_based else ""
     st.caption(
         f"{model_icon} **{selection.model_type}**{rule_tag} ({selection.confidence:.0%})  \n"
-        f"vta={selection.vta_score:.1f} / tta={selection.tta_score:.1f}  \n"
         f"{selection.reasoning}"
     )
 
