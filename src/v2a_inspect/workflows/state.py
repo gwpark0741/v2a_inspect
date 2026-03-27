@@ -27,6 +27,7 @@ class InspectOptions(BaseModel):
     video_timeout_ms: int = Field(default=180_000, ge=1)
     max_retries: int = Field(default=3, ge=0)
     poll_interval_seconds: float = Field(default=2.0, gt=0.0)
+    temperature: float = Field(default=0.1, ge=0.0, le=1.0)
 
 
 class InspectState(TypedDict, total=False):

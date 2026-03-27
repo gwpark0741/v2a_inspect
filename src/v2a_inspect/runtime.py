@@ -19,11 +19,13 @@ def build_llm(
     api_key: str | None = None,
     max_retries: int = 3,
     timeout_seconds: float | None = None,
+    temperature: float = 0.1,
 ) -> ChatGoogleGenerativeAI:
     """Build the LangChain Gemini chat model used by the workflow."""
 
     return ChatGoogleGenerativeAI(
         model=model,
+        temperature=temperature,
         api_key=api_key or _require_gemini_api_key(),
         max_retries=max(1, max_retries),
         timeout=timeout_seconds,
@@ -36,6 +38,7 @@ def build_inspect_runtime(
     api_key: str | None = None,
     max_retries: int = 3,
     timeout_seconds: float | None = None,
+    temperature: float = 0.1,
     llm: ChatGoogleGenerativeAI | None = None,
     genai_client: genai.Client | None = None,
 ) -> InspectRuntime:
@@ -50,6 +53,7 @@ def build_inspect_runtime(
             api_key=resolved_api_key,
             max_retries=max_retries,
             timeout_seconds=timeout_seconds,
+            temperature=temperature,
         ),
         genai_client=genai_client
         if genai_client is not None

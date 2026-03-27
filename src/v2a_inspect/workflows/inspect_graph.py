@@ -207,7 +207,12 @@ def _verify_node(
     return _run_node(
         "verify",
         state,
-        lambda: verify_groups(state, llm=runtime.context.llm, config=config),
+        lambda: verify_groups(
+            state,
+            llm=runtime.context.llm,
+            genai_client=runtime.context.genai_client,
+            config=config,
+        ),
     )
 
 
@@ -219,7 +224,12 @@ def _select_model_node(
     return _run_node(
         "select_model",
         state,
-        lambda: select_models(state, llm=runtime.context.llm, config=config),
+        lambda: select_models(
+            state,
+            llm=runtime.context.llm,
+            genai_client=runtime.context.genai_client,
+            config=config,
+        ),
     )
 
 
