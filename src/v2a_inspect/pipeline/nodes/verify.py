@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import google.genai as genai
 from langchain_core.language_models import BaseChatModel
 from langchain_core.runnables import RunnableConfig
 
@@ -13,12 +14,14 @@ from ._shared import (
     get_active_groups,
     invoke_structured_video,
 )
+from ._video import clip_and_upload
 
 
 def verify_groups(
     state: InspectState,
     *,
     llm: BaseChatModel,
+    genai_client: genai.Client,
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     """Use Gemini VLM to confirm or split multi-member track groups."""
@@ -81,10 +84,29 @@ def verify_groups(
             segment_list=build_verify_segment_list(group, tracks_by_id),
         )
 
+        member_track_objs = [
+            tracks_by_id[tid] for tid in group.member_ids if tid in tracks_by_id
+        ]
+        clip_start = min(t.start for t in member_track_objs)
+        clip_end = max(t.end for t in member_track_objs)
+        video_path = state.get("video_path", "")
+        if video_path:
+            try:
+                file_to_use = clip_and_upload(
+                    video_path, clip_start, clip_end, genai_client
+                )
+            except Exception as clip_exc:  # noqa: BLE001
+                warnings.append(
+                    f"Video clip failed for {group.group_id}; falling back to full video. Reason: {clip_exc}"
+                )
+                file_to_use = gemini_file
+        else:
+            file_to_use = gemini_file
+
         try:
             response = invoke_structured_video(
                 llm,
-                file_obj=gemini_file,
+                file_obj=file_to_use,
                 fps=options.fps,
                 prompt=resolved_prompt,
                 schema=VLMVerifyResponse,
