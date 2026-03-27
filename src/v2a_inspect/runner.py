@@ -63,7 +63,9 @@ def run_scene_analysis_only(
     trace_context: WorkflowTraceContext | None = None,
 ) -> InspectState:
     """bootstrap → upload → analyze → extract 만 실행. 그루핑 이전에 종료."""
-    resolved_options = (options or InspectOptions()).model_copy(update={"analyze_only": True})
+    resolved_options = (options or InspectOptions()).model_copy(
+        update={"analyze_only": True}
+    )
     initial_state = build_initial_inspect_state(video_path, options=resolved_options)
     return _run_workflow(
         initial_state,
