@@ -239,9 +239,28 @@ def build_verify_segment_list(
 
 
 def build_model_select_segment_list(member_tracks: list[RawTrack]) -> str:
-    return "\n".join(
-        f"  Segment {index}: scene {track.scene_index}, {track.start:.1f}s-{track.end:.1f}s"
-        f" | kind={track.kind} | n_objects_in_scene={track.n_scene_objects}"
-        f' | "{track.description}"'
-        for index, track in enumerate(member_tracks)
-    )
+    lines: list[str] = []
+    for index, track in enumerate(member_tracks):
+        if track.source_visible is True:
+            visible_str = "visible"
+        elif track.source_visible is False:
+            visible_str = "off-screen"
+        else:
+            visible_str = "unknown"
+
+        if track.event_timestamps:
+            ts_str = ", ".join(
+                f"{ts.time}s[{ts.type}]" for ts in track.event_timestamps
+            )
+        else:
+            ts_str = "continuous"
+
+        lines.append(
+            f"  Segment {index}: scene {track.scene_index}, "
+            f"{track.start:.1f}s-{track.end:.1f}s"
+            f" | source={visible_str}"
+            f" | n_events_in_scene={track.n_scene_events}"
+            f" | event_hits=[{ts_str}]"
+            f' | "{track.description}"'
+        )
+    return "\n".join(lines)

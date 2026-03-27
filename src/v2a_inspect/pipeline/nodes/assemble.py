@@ -32,10 +32,10 @@ def assemble_grouped_analysis(state: InspectState) -> dict[str, object]:
         scene.background_group_id = track_to_group.get(background_track_id)
         scene.background_canonical = track_to_canonical.get(background_track_id)
 
-        for object_index, obj in enumerate(scene.objects):
-            track_id = f"s{scene_index}_obj{object_index}"
-            obj.group_id = track_to_group.get(track_id)
-            obj.canonical_description = track_to_canonical.get(track_id)
+        for ev_index, event in enumerate(scene.audio_events):
+            track_id = f"s{scene_index}_ev{ev_index}"
+            event.group_id = track_to_group.get(track_id)
+            event.canonical_description = track_to_canonical.get(track_id)
 
     grouped_analysis = GroupedAnalysis(
         scene_analysis=annotated_scene_analysis,
