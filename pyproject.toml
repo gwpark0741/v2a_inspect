@@ -28,6 +28,7 @@ dependencies = [
     "pyyaml>=6.0.2",
     "streamlit>=1.55.0",
     "streamlit-authenticator>=0.4.2",
+    "pyngrok>=7.2.0",
 ]
 
 [project.scripts]

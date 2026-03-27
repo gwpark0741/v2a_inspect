@@ -93,6 +93,17 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     ui_parser.add_argument("--host", default="127.0.0.1")
     ui_parser.add_argument("--port", type=int, default=8501)
+    ui_parser.add_argument(
+        "--ngrok",
+        action="store_true",
+        default=False,
+        help="Expose the UI via ngrok tunnel",
+    )
+    ui_parser.add_argument(
+        "--ngrok-token",
+        default=None,
+        help="ngrok authtoken (overrides NGROK_AUTHTOKEN env var)",
+    )
     ui_parser.set_defaults(func=_run_ui_command)
 
     return parser
@@ -254,6 +265,23 @@ def _run_ui_command(args: argparse.Namespace) -> int:
             "The 'streamlit' executable is not available in this environment."
         )
 
+    tunnel = None
+    if args.ngrok:
+        try:
+            from pyngrok import ngrok as _ngrok
+
+            token = args.ngrok_token or (
+                settings.ngrok_authtoken.get_secret_value()
+                if settings.ngrok_authtoken
+                else None
+            )
+            if token:
+                _ngrok.set_auth_token(token)
+            tunnel = _ngrok.connect(args.port)
+            print(f"\n🌐 ngrok tunnel: {tunnel.public_url}\n", flush=True)
+        except Exception as exc:
+            print(f"[ngrok] Failed to start tunnel: {exc}", file=sys.stderr)
+
     completed = subprocess.run(
         [
             streamlit_executable,
@@ -266,6 +294,15 @@ def _run_ui_command(args: argparse.Namespace) -> int:
         ],
         check=False,
     )
+
+    if tunnel is not None:
+        try:
+            from pyngrok import ngrok as _ngrok
+
+            _ngrok.kill()
+        except Exception:
+            pass
+
     return completed.returncode
 
 

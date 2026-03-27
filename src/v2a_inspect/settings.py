@@ -34,8 +34,10 @@ class Settings(BaseSettings):
     auth_cookie_name: str = "v2a_inspect_cookie"
     auth_cookie_expiry_days: int = Field(default=1, ge=1)
     auth_credentials_path: Path | None = None
+    ngrok_authtoken: SecretStr | None = None
     ui_analysis_concurrency_limit: int = Field(default=2, ge=1)
     ui_analysis_acquire_timeout_seconds: int = Field(default=120, ge=1)
+    ui_analysis_cooldown_seconds: int = Field(default=60, ge=0)
     ui_temp_cleanup_max_age_seconds: int = Field(default=3600, ge=1)
     ui_cleanup_interval_seconds: int = Field(default=1800, ge=1)
 
