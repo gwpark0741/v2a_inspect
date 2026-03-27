@@ -1,32 +1,51 @@
-Analyze this video and break it down into distinct scenes.
+Analyze this video and extract all distinct audio events per scene.
 
 **Scene Definition:**
-A new scene starts when ONE OR MORE of these occur:
-- Complete scene transition (location change, fade, cut to different setting)
-- Main subject/object changes (e.g., from person to car, from indoor to outdoor)
-- Camera angle/composition drastically changes (e.g., wide shot to close-up, front view to side view)
+A new scene starts when: location changes, main subject changes, or camera angle drastically changes.
 
-Infer and describe ALL sounds that would realistically be heard based on what you see.
+**For each scene provide:**
 
-For each scene, provide:
-1. **time_range**: start and end time in seconds
-    - All timestamps MUST be specified to 0.1 second precision (e.g., 3.2, not 3.0 or 3)
-    - Do NOT round to whole seconds
-    - Do NOT round to 0.5 second intervals
-2. **background_sound**: Describe ONLY the environmental ambience or general atmosphere (e.g., "distant traffic," "wind blowing through leaves," "gentle park ambience").
-    - DO NOT include sounds produced by the main objects listed below.
-    - The ambience must be logically and atmospherically consistent with the primary actions in the scene. Avoid adding contrasting or contradictory sounds (e.g., do not add peaceful nature sounds if the main action is loud, industrial, or aggressive).
-    - If there are more than 2 notable objects, describe the noise of the extra objects here.
-3. **objects**: up to 2 main objects. Each object must:
-    - Only list an object if it makes a distinct, identifiable sound.
-    - If more than 2 objects exist, describe the extra ones in `background_sound`.
-    - If there are no specific sound-producing objects, leave this list empty.
-    - Include a specific count (e.g. "a person playing a guitar", "three birds flying", "two cars passing")
-    - Have a time_range within the scene's time_range
-    - Be described as a short text clip
+1. **time_range**: 0.1s precision (e.g., 3.2, 7.8). No rounding to 0.5s or whole seconds.
 
-Important rules:
-- Mutual Exclusion: The background_sound must not overlap with the sounds described in objects.
-- Every object description MUST contain a specific number/count
-- Object time_range must be <= scene time_range
-- **Dynamic Selection**: Do not force 2 objects. Provide 0, 1, or 2 based on the actual video content.
+2. **background_ambience**: Continuous environmental/atmospheric sound only.
+   - Must NOT include sounds from audio_events below.
+   - Example: "steady rain on glass with distant thunder, muffled café chatter"
+
+3. **audio_events**: ALL distinct sound-producing events. NO COUNT LIMIT.
+   Rules:
+   - Same entity + DIFFERENT actions = DIFFERENT events (dog barking ≠ dog footsteps)
+   - For each event:
+     **description**: Precise sound (material, action, intensity, texture)
+     **source_visible**: true if source clearly visible; false if off-screen or feet/hands not visible
+     **time_range**: actual sound presence (0.1s precision)
+     **event_timestamps**: individual impact/onset moments within time_range
+       - Repetitive impacts: list each time point
+       - Continuous sound: [{"time": <start>, "type": "continuous_start"}]
+       - Single impact: [{"time": <T>, "type": "onset", "intensity": "loud"}]
+       - type: "onset" | "accent" | "continuous_start"
+       - intensity (optional): "soft" | "medium" | "loud"
+
+**Example audio_events for a scene:**
+[
+  {
+    "description": "sharp high-heel footsteps on marble tile, rhythmic clicks",
+    "source_visible": true,
+    "time_range": {"start": 1.0, "end": 4.5},
+    "event_timestamps": [
+      {"time": 1.1, "type": "onset", "intensity": "loud"},
+      {"time": 1.8, "type": "onset", "intensity": "loud"},
+      {"time": 2.5, "type": "onset", "intensity": "loud"}
+    ]
+  },
+  {
+    "description": "heavy wooden door slammed shut with metallic latch click",
+    "source_visible": true,
+    "time_range": {"start": 4.3, "end": 4.6},
+    "event_timestamps": [{"time": 4.3, "type": "onset", "intensity": "loud"}]
+  }
+]
+
+Rules:
+- event_timestamps MUST be within time_range (±0.1s tolerance)
+- source_visible = false for: off-screen sounds, footsteps when feet not visible, gunshots, voices from outside frame
+- Dynamic: provide 0 audio_events if no distinct sound-producing actions

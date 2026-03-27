@@ -1,39 +1,22 @@
-You are helping select an audio generation model by analyzing video segments visually.
+Select TTA or VTA for each audio event segment below.
 
-Context for each segment is provided: scene index, time range, track kind, object count in scene, and sound description.
+**Routing Policy:**
 
-Models:
-- VTA (Video-to-Audio): precise temporal alignment with visuals; weaker at separating multiple sources
-- TTA (Text-to-Audio): superior sound quality and multi-source isolation; no temporal sync
+→ Choose TTA (Text-to-Audio) when:
+  - Sound is continuous or atmospheric (engine hum, ambient noise, sustained music)
+  - Precise frame-by-frame sync is NOT required
+  - Multiple independent sources benefit from clean isolation
+  - Source is clearly visible with predictable, steady motion
 
-Score each segment on 3 VIDEO-OBSERVABLE dimensions (1–5 integers):
+→ Choose VTA (Video-to-Audio) when:
+  - Strict frame-by-frame sync required (fast impacts, lip-sync, fight scenes)
+  - Sound source is NOT visible on screen (source_visible=off-screen: gunshots, unseen footsteps)
+  - Rapid/unpredictable motion that must be captured in sync
 
-motion_level — Visual dynamism of the segment
-  5 = extremely fast motion, impacts, collisions, camera shake
-  4 = active movement (running, quick gestures, fast vehicle)
-  3 = moderate movement (walking, slow vehicle, gradual scene change)
-  2 = mostly still with minor motion
-  1 = completely static or imperceptibly slow
-
-event_coupling — How directly do visual events trigger distinct individual sounds?
-  5 = every visible action clearly produces a unique, isolatable sound (footstep, punch, machine click)
-  4 = most visual events have clear sound correspondences
-  3 = some visual-sound correspondence, but not all events are isolatable
-  2 = loose relationship; sounds are more atmospheric than event-driven
-  1 = purely diffuse ambient — no specific visual event triggers sounds
-
-source_diversity — How many INDEPENDENT sound-producing subjects are simultaneously visible and active?
-  5 = four or more distinct moving subjects each likely producing separate sounds
-  4 = three distinct subjects
-  3 = two distinct subjects
-  2 = one primary subject with minor background activity
-  1 = single unified soundscape, no independent sources
-
-IMPORTANT: n_objects_in_scene tells you how many foreground objects the scene analysis found.
-Use it as a strong hint for source_diversity.
-
-Segments to evaluate:
+**Segments to evaluate:**
 {segment_list}
 
-Watch the video at each indicated time range. Return ONLY valid JSON:
-{{"segments": [{{"segment_index": 0, "motion_level": 3, "event_coupling": 4, "source_diversity": 2, "reasoning": "brief 1-sentence reason"}}]}}
+Watch the video at each time range. For each segment, reason step-by-step then decide.
+
+Return ONLY valid JSON:
+{{"segments": [{{"segment_index": 0, "reasoning": "step-by-step reasoning here", "selected_model": "TTA", "confidence": 0.85}}]}}

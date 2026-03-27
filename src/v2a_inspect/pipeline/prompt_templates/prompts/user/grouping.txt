@@ -28,6 +28,7 @@ Rules:
 - Prefer merging over splitting when the sound type is the same — a later verification step will split incorrect merges.
 - Subject count differences (e.g., "1 person" vs "3 people") should NOT prevent grouping if the action/sound is the same.
 - Background / ambient sounds across scenes should be grouped together UNLESS the environments are clearly and fundamentally different (e.g., underwater vs. outer space). Variations in wording like "quiet hum", "ambient noise", "background sound" all refer to the same background and MUST be merged.
+- Events with source_visible=false may still be grouped if they represent the same sound type, but note that VTA routing is likely for the entire group at the model selection step.
 
 Descriptions:
 {numbered_list}
