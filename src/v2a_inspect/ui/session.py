@@ -18,6 +18,8 @@ SESSION_DEFAULTS: tuple[str, ...] = (
     "grouped",
     "inspect_state",
     "clip_dir",
+    "is_analyzing",
+    "gemini_file",
 )
 
 
@@ -44,6 +46,8 @@ def reset_state() -> None:
 
     for key in SESSION_DEFAULTS:
         st.session_state[key] = None
+    st.session_state["is_analyzing"] = False
+    st.session_state["gemini_file"] = None
     st.session_state["model_overrides"] = {}
 
 
@@ -58,6 +62,12 @@ def get_langfuse_session_id() -> str:
         session_id = uuid4().hex
         st.session_state["langfuse_session_id"] = session_id
     return session_id
+
+
+@st.cache_resource
+def get_user_last_analysis_times() -> dict[str, float]:
+    """username → last analysis start time (unix). Process-level 공유 dict."""
+    return {}
 
 
 @st.cache_resource
