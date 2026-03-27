@@ -28,6 +28,7 @@ class InspectOptions(BaseModel):
     max_retries: int = Field(default=3, ge=0)
     poll_interval_seconds: float = Field(default=2.0, gt=0.0)
     temperature: float = Field(default=0.1, ge=0.0, le=1.0)
+    analyze_only: bool = False  # True이면 extract 완료 후 그루핑 없이 종료
 
 
 class InspectState(TypedDict, total=False):

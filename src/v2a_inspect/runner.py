@@ -52,6 +52,30 @@ def run_inspect(
     )
 
 
+def run_scene_analysis_only(
+    video_path: str,
+    *,
+    options: InspectOptions | None = None,
+    runtime: InspectRuntime | None = None,
+    graph: CompiledStateGraph | None = None,
+    progress_callback: ProgressCallback | None = None,
+    warning_callback: ProgressCallback | None = None,
+    trace_context: WorkflowTraceContext | None = None,
+) -> InspectState:
+    """bootstrap → upload → analyze → extract 만 실행. 그루핑 이전에 종료."""
+    resolved_options = (options or InspectOptions()).model_copy(update={"analyze_only": True})
+    initial_state = build_initial_inspect_state(video_path, options=resolved_options)
+    return _run_workflow(
+        initial_state,
+        runtime=runtime,
+        graph=graph,
+        options=resolved_options,
+        progress_callback=progress_callback,
+        warning_callback=warning_callback,
+        trace_context=trace_context,
+    )
+
+
 def run_group_from_scene_analysis(
     scene_analysis: VideoSceneAnalysis,
     *,

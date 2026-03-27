@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Callable, Literal, Sequence, cast
+from typing import Any, Callable, Literal, Sequence, Union, cast
 
 import google.genai as genai
 from langchain_core.language_models import BaseChatModel
@@ -112,7 +112,11 @@ def build_inspect_graph(
         },
     )
     graph.add_edge("analyze", "extract")
-    graph.add_edge("extract", "group")
+    graph.add_conditional_edges(
+        "extract",
+        _route_after_extract,
+        {"group": "group", END: END},
+    )
     graph.add_conditional_edges(
         "group",
         _route_after_group,
@@ -238,6 +242,12 @@ def _assemble_node(
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
     return _run_node("assemble", state, lambda: assemble_grouped_analysis(state))
+
+
+def _route_after_extract(state: InspectState) -> Union[Literal["group"], str]:
+    if _get_options(state).analyze_only:
+        return END
+    return "group"
 
 
 def _route_after_group(
