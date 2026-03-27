@@ -5,7 +5,6 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, Field
 
 NonNegativeInt = Annotated[int, Field(ge=0)]
-ScoreValue = Annotated[float, Field(ge=1.0, le=5.0)]
 
 
 class GroupingResponseGroup(BaseModel):
@@ -24,13 +23,12 @@ class VLMVerifyResponse(BaseModel):
     reasoning: str = ""
 
 
-class ModelSelectSegmentResponse(BaseModel):
+class CoTModelSelectSegmentResponse(BaseModel):
     segment_index: NonNegativeInt | None = None
-    motion_level: ScoreValue = 3.0
-    event_coupling: ScoreValue = 3.0
-    source_diversity: ScoreValue = 3.0
     reasoning: str = ""
+    selected_model: Literal["TTA", "VTA"] = "TTA"
+    confidence: float = Field(default=0.5, ge=0.0, le=1.0)
 
 
 class ModelSelectResponse(BaseModel):
-    segments: list[ModelSelectSegmentResponse] = Field(default_factory=list)
+    segments: list[CoTModelSelectSegmentResponse] = Field(default_factory=list)

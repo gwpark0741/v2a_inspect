@@ -1,22 +1,23 @@
 from .gemini import (
+    CoTModelSelectSegmentResponse,
     GroupingResponse,
     GroupingResponseGroup,
     ModelSelectResponse,
-    ModelSelectSegmentResponse,
     VLMVerifyResponse,
 )
-from .scenes import Scene, SceneObject, TimeRange, VideoSceneAnalysis
+from .scenes import AudioEvent, EventTimestamp, Scene, TimeRange, VideoSceneAnalysis
 from .tracks import GroupedAnalysis, ModelSelection, RawTrack, TrackGroup
 
 __all__ = [
     "TimeRange",
-    "SceneObject",
+    "EventTimestamp",
+    "AudioEvent",
     "Scene",
     "VideoSceneAnalysis",
     "GroupingResponseGroup",
     "GroupingResponse",
     "VLMVerifyResponse",
-    "ModelSelectSegmentResponse",
+    "CoTModelSelectSegmentResponse",
     "ModelSelectResponse",
     "ModelSelection",
     "RawTrack",

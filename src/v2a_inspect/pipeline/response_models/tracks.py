@@ -2,7 +2,7 @@ import re
 from pydantic import BaseModel, Field
 from typing import Optional, Literal, List, Dict
 
-from .scenes import VideoSceneAnalysis
+from .scenes import EventTimestamp, VideoSceneAnalysis
 
 
 class ModelSelection(BaseModel):
@@ -10,26 +10,25 @@ class ModelSelection(BaseModel):
 
     reasoning: str
     model_type: Literal["TTA", "VTA"]
-    confidence: float = Field(..., ge=0.0, le=1.0)  # 0.0–1.0
-    vta_score: float  # combined VTA preference (video motion + event coupling)
-    tta_score: float  # combined TTA preference (source diversity + object count bias)
+    confidence: float = Field(..., ge=0.0, le=1.0)
     rule_based: bool = (
         False  # True = deterministic rule (background, etc.), False = LLM judgment
     )
 
 
 class RawTrack(BaseModel):
-    """One track extracted from a Scene (background or object)."""
+    """One track extracted from a Scene (background or event)."""
 
-    track_id: str  # e.g. "s0_bg", "s0_obj0", "s1_obj1"
+    track_id: str  # format: "s{scene_index}_bg" or "s{scene_index}_ev{event_index}"
     scene_index: int
-    kind: Literal["background", "object"]
+    kind: Literal["background", "event"]
     description: str
+    source_visible: Optional[bool] = None  # None for background tracks
     start: float
     end: float
-    obj_index: Optional[int] = None  # None for backgrounds
-    n_scene_objects: int = 0  # number of object tracks in the same scene
-    model_selection: Optional[ModelSelection] = None  # assigned post-grouping
+    event_timestamps: List[EventTimestamp] = Field(default_factory=list)
+    n_scene_events: int = 0  # number of event tracks in the same scene
+    model_selection: Optional[ModelSelection] = None
 
     @property
     def duration(self) -> float:
@@ -37,10 +36,10 @@ class RawTrack(BaseModel):
 
     @classmethod
     def validate_track_id(cls, track_id: str) -> str:
-        pattern = r"^s\d+_(bg|obj\d+)$"
+        pattern = r"^s\d+_(bg|ev\d+)$"
         if not re.match(pattern, track_id):
             raise ValueError(
-                f"Invalid track_id format: '{track_id}'. Expected format 's{{scene_index}}_{{bg|obj{{obj_index}}}}', e.g. 's0_bg', 's1_obj0'."
+                f"Invalid track_id format: '{track_id}'. Expected 's{{i}}_bg' or 's{{i}}_ev{{j}}'."
             )
         return track_id
 
