@@ -60,16 +60,16 @@ def render_sidebar(authenticator: Any) -> InspectOptions:
 📹 Video Upload
       │
       ▼
-🤖 Gemini Scene Analysis
+🤖 Gemini Scene Analysis  ← 1차 분석 (Step 2)
    FPS · Prompt Type
       │
       ▼
  VideoSceneAnalysis
   ├─ Scene 0
-  │   ├─ background_sound
-  │   └─ objects (≤2)
+  │   ├─ background_ambience
+  │   └─ audio_events (무제한)
   └─ Scene N ...
-      │
+      │        ← 그루핑 시작 (Step 3)
       ▼
 🔗 Cross-Scene Text Grouping
    (Gemini batch call)
@@ -209,6 +209,66 @@ def render_results(
         )
 
 
+def render_scene_analysis_preview(
+    scene_analysis: VideoSceneAnalysis,
+    *,
+    video_path: str,
+    clip_dir: str,
+) -> None:
+    """Phase 1 결과: 씬별 한 줄 레이아웃 — 왼쪽 영상, 오른쪽 오디오 설명."""
+    st.divider()
+    st.header("Step 2: 씬 분석 결과")
+    n_events = sum(len(s.audio_events) for s in scene_analysis.scenes)
+    st.caption(
+        f"총 {len(scene_analysis.scenes)}개 씬 | "
+        f"총 {n_events}개 이벤트 | "
+        f"영상 길이 {scene_analysis.total_duration:.1f}s"
+    )
+
+    type_icon = {"onset": "🔴", "accent": "🟡", "continuous_start": "🔵"}
+
+    for scene in scene_analysis.scenes:
+        st.markdown(
+            f"#### 🎬 Scene {scene.scene_index}  "
+            f"({scene.time_range.start:.1f}s – {scene.time_range.end:.1f}s)"
+        )
+
+        col_video, col_audio = st.columns([1, 2])
+
+        # 왼쪽: 영상 클립
+        with col_video:
+            if video_path and clip_dir:
+                clip_path = extract_clip(
+                    video_path, scene.time_range.start, scene.time_range.end, clip_dir
+                )
+                if clip_path:
+                    st.video(clip_path)
+
+        # 오른쪽: 배경 + 이벤트 목록
+        with col_audio:
+            st.markdown(f"🌲 **배경:** {scene.background_ambience}")
+
+            if scene.audio_events:
+                for ev_idx, event in enumerate(scene.audio_events):
+                    visible = "👁" if event.source_visible else "🚫"
+                    ts_str = ""
+                    if event.event_timestamps:
+                        parts = [
+                            f"{type_icon.get(ts.type, '⚪')}{ts.time:.1f}s"
+                            for ts in event.event_timestamps
+                        ]
+                        ts_str = f"  ⏱ {' '.join(parts)}"
+                    st.markdown(
+                        f"`ev{ev_idx}` {visible} {event.description}  \n"
+                        f"<sub>{event.time_range.start:.1f}s–{event.time_range.end:.1f}s{ts_str}</sub>",
+                        unsafe_allow_html=True,
+                    )
+            else:
+                st.caption("이벤트 없음")
+
+        st.divider()
+
+
 def render_footer() -> None:
     st.divider()
     st.caption(
@@ -334,6 +394,7 @@ def _render_singleton_member(
         f"*{track.kind}*"
     )
     st.info(track.description)
+    _render_track_event_timestamps(track)
     _render_track_model_selection(track)
     _render_track_clip(track, video_path=video_path, clip_dir=clip_dir)
 
@@ -351,8 +412,21 @@ def _render_member(
         f"Scene {track.scene_index} | {track.start:.1f}s – {track.end:.1f}s | *{track.kind}*"
     )
     st.info(track.description)
+    _render_track_event_timestamps(track)
     _render_track_model_selection(track)
     _render_track_clip(track, video_path=video_path, clip_dir=clip_dir)
+
+
+def _render_track_event_timestamps(track: RawTrack) -> None:
+    if not track.event_timestamps:
+        return
+    type_icon = {"onset": "🔴", "accent": "🟡", "continuous_start": "🔵"}
+    parts = []
+    for ts in track.event_timestamps:
+        icon = type_icon.get(ts.type, "⚪")
+        intensity = f"({ts.intensity})" if ts.intensity else ""
+        parts.append(f"{icon} {ts.time:.1f}s {ts.type}{intensity}")
+    st.caption("⏱ " + " · ".join(parts))
 
 
 def _render_track_model_selection(track: RawTrack) -> None:
