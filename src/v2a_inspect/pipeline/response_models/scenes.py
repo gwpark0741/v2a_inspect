@@ -18,8 +18,9 @@ class AudioEvent(BaseModel):
     description: str = Field(
         description="Detailed sound description: material, action, intensity, texture, rhythm"
     )
-    source_visible: bool = Field(
-        description="True if sound source is clearly visible on screen; False if off-screen or ambiguous"
+    source_visible: Optional[bool] = Field(
+        default=None,
+        description="True if sound source is clearly visible on screen; False if off-screen. None if not specified.",
     )
     time_range: TimeRange = Field(description="Overall time range of this sound event")
     event_timestamps: List[EventTimestamp] = Field(
@@ -61,3 +62,42 @@ class Scene(BaseModel):
 class VideoSceneAnalysis(BaseModel):
     total_duration: float = Field(description="Total video duration in seconds")
     scenes: List[Scene] = Field(description="List of scenes detected in the video")
+
+
+# --------------------------------------------------------------------------- #
+# Object-based schema (legacy, for experiment comparison)
+# --------------------------------------------------------------------------- #
+
+
+class SceneObject(BaseModel):
+    description: str = Field(
+        description="Object description as a short text clip. Must include specific count."
+    )
+    time_range: TimeRange = Field(
+        description="Time range when this object is actively producing sound."
+    )
+    event_timestamps: List[EventTimestamp] = Field(
+        default_factory=list,
+        description="Individual onset/impact moments. Empty list for continuous sounds.",
+    )
+    group_id: Optional[str] = Field(default=None)
+    canonical_description: Optional[str] = Field(default=None)
+
+
+class ObjectBasedScene(BaseModel):
+    scene_index: int = Field(description="0-based scene index")
+    time_range: TimeRange = Field(description="Time range of this scene")
+    background_sound: str = Field(
+        description="Background sound/ambience. Include extra objects beyond main 2."
+    )
+    objects: List[SceneObject] = Field(
+        description="All sound-producing objects in the scene. No count limit.",
+        default_factory=list,
+    )
+    background_group_id: Optional[str] = Field(default=None)
+    background_canonical: Optional[str] = Field(default=None)
+
+
+class ObjectBasedVideoSceneAnalysis(BaseModel):
+    total_duration: float = Field(description="Total video duration in seconds")
+    scenes: List[ObjectBasedScene] = Field(description="List of scenes")

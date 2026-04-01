@@ -1,0 +1,104 @@
+Analyze this video and extract all distinct audio events per scene.
+
+**Scene Definition:**
+A new scene starts when: location changes, main subject changes, or camera angle drastically changes.
+
+**For each scene provide:**
+
+1. **time_range**: 0.1s precision (e.g., 3.2, 7.8).
+
+2. **background_ambience**: Continuous environmental/atmospheric sound only.
+   - Must NOT include sounds from audio_events below.
+   - Example: "steady rain on glass with distant thunder, muffled café chatter"
+
+3. **audio_events**: ALL distinct sound-producing events. NO COUNT LIMIT.
+   Rules:
+   - Same entity + DIFFERENT actions = DIFFERENT events (dog barking ≠ dog footsteps)
+   - For each event:
+     **description**: Precise sound (material, action, intensity, texture)
+     **source_visible**: true if source clearly visible; false if off-screen or feet/hands not visible
+     **time_range**: actual sound presence (0.1s precision)
+     **event_timestamps**: individual impact/onset moments within time_range
+       - Repetitive impacts: list each time point
+       - Continuous sound: [{"time": <start>, "type": "continuous_start"}]
+       - Single impact: [{"time": <T>, "type": "onset", "intensity": "loud"}]
+       - type: "onset" | "accent" | "continuous_start"
+       - intensity (optional): "soft" | "medium" | "loud"
+
+**Few-Shot Examples:**
+
+--- Example 1: Kitchen Scene ---
+Input: A person chopping vegetables on a cutting board, then turning on a faucet.
+Output:
+{
+  "total_duration": 8.0,
+  "scenes": [{
+    "scene_index": 0,
+    "time_range": {"start": 0.0, "end": 8.0},
+    "background_ambience": "quiet kitchen hum with refrigerator motor drone",
+    "audio_events": [
+      {
+        "description": "rhythmic knife chopping on wooden cutting board, crisp vegetable snaps",
+        "source_visible": true,
+        "time_range": {"start": 0.6, "end": 4.2},
+        "event_timestamps": [
+          {"time": 0.6, "type": "onset", "intensity": "medium"},
+          {"time": 1.2, "type": "onset", "intensity": "medium"},
+          {"time": 1.8, "type": "onset", "intensity": "medium"},
+          {"time": 2.4, "type": "onset", "intensity": "loud"},
+          {"time": 3.0, "type": "onset", "intensity": "medium"},
+          {"time": 3.6, "type": "onset", "intensity": "medium"}
+        ]
+      },
+      {
+        "description": "metal faucet handle turned with squeaky twist, water rushing into stainless steel sink",
+        "source_visible": true,
+        "time_range": {"start": 4.8, "end": 7.8},
+        "event_timestamps": [
+          {"time": 4.8, "type": "onset", "intensity": "medium"},
+          {"time": 5.4, "type": "continuous_start"}
+        ]
+      }
+    ]
+  }]
+}
+
+--- Example 2: Outdoor Street Scene ---
+Input: A car passes by, then a person walks across the street.
+Output:
+{
+  "total_duration": 10.0,
+  "scenes": [{
+    "scene_index": 0,
+    "time_range": {"start": 0.0, "end": 10.0},
+    "background_ambience": "distant city traffic rumble with wind gusts",
+    "audio_events": [
+      {
+        "description": "car engine approaching and passing, tire hiss on wet asphalt with Doppler shift",
+        "source_visible": true,
+        "time_range": {"start": 0.9, "end": 4.5},
+        "event_timestamps": [{"time": 0.9, "type": "continuous_start"}]
+      },
+      {
+        "description": "soft footsteps on concrete sidewalk, casual walking pace",
+        "source_visible": true,
+        "time_range": {"start": 6.0, "end": 9.6},
+        "event_timestamps": [
+          {"time": 6.0, "type": "onset", "intensity": "soft"},
+          {"time": 6.6, "type": "onset", "intensity": "soft"},
+          {"time": 7.2, "type": "onset", "intensity": "soft"},
+          {"time": 7.8, "type": "onset", "intensity": "soft"},
+          {"time": 8.4, "type": "onset", "intensity": "soft"},
+          {"time": 9.0, "type": "onset", "intensity": "soft"}
+        ]
+      }
+    ]
+  }]
+}
+
+**Now analyze the provided video following the same format and level of detail.**
+
+Rules:
+- event_timestamps MUST be within time_range (±0.1s tolerance)
+- source_visible = false for: off-screen sounds, footsteps when feet not visible, gunshots, voices from outside frame
+- Dynamic: provide 0 audio_events if no distinct sound-producing actions

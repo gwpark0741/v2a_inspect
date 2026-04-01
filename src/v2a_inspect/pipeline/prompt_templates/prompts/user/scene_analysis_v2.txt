@@ -1,33 +1,22 @@
-Analyze this video in two steps.
+Analyze this video and extract all distinct audio events per scene.
 
-**Step 1: Split the video into scenes.**
-
-Scene Definition:
+**Scene Definition:**
 A new scene starts when: location changes, main subject changes, or camera angle drastically changes.
 
-For each scene, determine:
-- **scene_index**: 0-based index
-- **time_range**: start and end time (0.1s precision, e.g., 3.2, 7.8)
+**For each scene provide:**
 
-Example scene split for a 10-second video:
-- Scene 0: 0.0s - 3.5s (two people talking in a room)
-- Scene 1: 3.5s - 7.2s (cut to outdoor street)
-- Scene 2: 7.2s - 10.0s (close-up of a car)
+1. **time_range**: 0.1s precision (e.g., 3.2, 7.8).
 
-**Step 2: For each scene, extract all distinct audio events.**
-
-For each scene provide:
-
-1. **background_ambience**: Continuous environmental/atmospheric sound only.
+2. **background_ambience**: Continuous environmental/atmospheric sound only.
    - Must NOT include sounds from audio_events below.
    - Example: "steady rain on glass with distant thunder, muffled café chatter"
 
-2. **audio_events**: ALL distinct sound-producing events. NO COUNT LIMIT.
+3. **audio_events**: ALL distinct sound-producing events. NO COUNT LIMIT.
    Rules:
    - Same entity + DIFFERENT actions = DIFFERENT events (dog barking ≠ dog footsteps)
-   - Same entity + SAME action repeating = ONE event with multiple event_timestamps (e.g., repeated footsteps = one event with onset per step)
    - For each event:
      **description**: Precise sound (material, action, intensity, texture)
+     **source_visible**: true if source clearly visible; false if off-screen or feet/hands not visible
      **time_range**: actual sound presence (0.1s precision)
      **event_timestamps**: individual impact/onset moments within time_range
        - Repetitive impacts: list each time point
@@ -36,10 +25,18 @@ For each scene provide:
        - type: "onset" | "accent" | "continuous_start"
        - intensity (optional): "soft" | "medium" | "loud"
 
+**CRITICAL: Anti-Hallucination Rule**
+- ONLY describe sounds that are clearly supported by visible actions or events in the video.
+- Do NOT invent, guess, or hallucinate sounds that cannot be confirmed from the visual evidence.
+- If you are uncertain whether a sound would occur, do NOT include it.
+- Prefer under-reporting (fewer events) over over-reporting (hallucinated events).
+- For each event, the source action MUST be visible in the video frames.
+
 **Example audio_events for a scene:**
 [
   {
     "description": "sharp high-heel footsteps on marble tile, rhythmic clicks",
+    "source_visible": true,
     "time_range": {"start": 0.9, "end": 4.5},
     "event_timestamps": [
       {"time": 1.2, "type": "onset", "intensity": "loud"},
@@ -49,11 +46,13 @@ For each scene provide:
   },
   {
     "description": "heavy wooden door slammed shut with metallic latch click",
-    "time_range": {"start": 4.2, "end": 4.8},
+    "source_visible": true,
+    "time_range": {"start": 4.2, "end": 4.5},
     "event_timestamps": [{"time": 4.2, "type": "onset", "intensity": "loud"}]
   }
 ]
 
 Rules:
 - event_timestamps MUST be within time_range (±0.1s tolerance)
+- source_visible = false for: off-screen sounds, footsteps when feet not visible, gunshots, voices from outside frame
 - Dynamic: provide 0 audio_events if no distinct sound-producing actions

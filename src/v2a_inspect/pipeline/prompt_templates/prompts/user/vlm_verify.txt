@@ -5,10 +5,16 @@ Proposed canonical description: "{canonical_description}"
 Segments to compare (check the video at the indicated time ranges):
 {segment_list}
 
-Watch the video at each time range listed above and answer:
-1. Do ALL listed segments show the same entity? (yes / no / uncertain)
+**Verification instructions:**
+1. Read the canonical description carefully. Focus on the KEY SOUND ELEMENTS: the material, action type, and sound source described.
+2. Watch the video at EACH time range listed above.
+3. For each segment, check: does the visual evidence show the SAME sound source performing the SAME type of action as described?
+4. Decide: do ALL segments produce the same type of sound?
+
+Answer:
+1. Do ALL listed segments show the same sound-producing entity? (yes / no / uncertain)
 2. If no, which segments belong together? List groups by segment index (0-based within this list).
-3. Brief reasoning (1-2 sentences).
+3. Brief reasoning (1-2 sentences) referencing what you observed in the video.
 
 Return ONLY valid JSON matching this schema:
 {{"same_entity": true, "confirmed_groups": null, "reasoning": "..."}}
