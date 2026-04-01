@@ -13,16 +13,6 @@
   {% endfor %}
 </nav>
 
-<!-- Filmstrip -->
-<div class="filmstrip">
-  {% for frame in frames %}
-  <div>
-    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
-    <div class="frame-label">{{ frame.time }}s</div>
-  </div>
-  {% endfor %}
-</div>
-
 <!-- Model summary table -->
 <div class="card">
   <div class="card-header">📊 모델별 요약</div>

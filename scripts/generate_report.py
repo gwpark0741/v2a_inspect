@@ -131,7 +131,7 @@ def compute_model_summary(
     model_results: dict[str, list[dict]] = defaultdict(list)
     for video_results in results_by_video.values():
         for r in video_results:
-            if r["run"]["experiment_id"] == "model-compare" and r.get("scene_analysis"):
+            if r.get("scene_analysis"):
                 model_results[r["run"]["model"]].append(r)
 
     summary: dict[str, ModelStats] = {}
@@ -552,9 +552,7 @@ def generate_reports(results_dir: Path) -> None:
             model_results = [
                 r
                 for r in results
-                if r["run"].get("model") == model_name
-                and r["run"].get("experiment_id") == "model-compare"
-                and r.get("scene_analysis")
+                if r["run"].get("model") == model_name and r.get("scene_analysis")
             ]
             if not model_results:
                 continue
@@ -619,10 +617,12 @@ def generate_reports(results_dir: Path) -> None:
                         continue
                     ga = r.get("grouped_analysis")
                     scenes = _format_scene_analysis(r["scene_analysis"], grouped=ga)
-                    groups = ga.get("groups", []) if ga else []
+                    raw_groups = ga.get("groups", []) if ga else []
+                    raw_tracks = ga.get("raw_tracks", []) if ga else []
+                    tracks_by_id = {t["track_id"]: t for t in raw_tracks}
 
+                    clip_dir = reports_dir / "clips" / video_name
                     if video_path and Path(video_path).exists():
-                        clip_dir = reports_dir / "clips" / video_name
                         extract_scene_clips(
                             video_path,
                             scenes,
@@ -630,11 +630,44 @@ def generate_reports(results_dir: Path) -> None:
                             path_prefix="../clips",
                         )
 
+                    # Add clip paths to groups
+                    groups_with_clips = []
+                    for g in raw_groups:
+                        clips = []
+                        for mid in g.get("member_ids", []):
+                            track = tracks_by_id.get(mid)
+                            if track and video_path and Path(video_path).exists():
+                                from v2a_inspect.ui.video import extract_clip
+
+                                clip_dir.mkdir(parents=True, exist_ok=True)
+                                cp = extract_clip(
+                                    video_path,
+                                    track["start"],
+                                    track["end"],
+                                    str(clip_dir),
+                                )
+                                if cp:
+                                    ts_list = track.get("event_timestamps", [])
+                                    ts_str = ", ".join(
+                                        f"{t['time']}s[{t['type']}]" for t in ts_list
+                                    )
+                                    clips.append(
+                                        {
+                                            "track_id": mid,
+                                            "start": track["start"],
+                                            "end": track["end"],
+                                            "description": track.get("description", ""),
+                                            "timestamps": ts_str,
+                                            "path": f"../clips/{video_name}/{Path(cp).name}",
+                                        }
+                                    )
+                        groups_with_clips.append({**g, "clips": clips})
+
                     repeats_data.append(
                         {
                             "repeat_index": ri,
                             "scenes": scenes,
-                            "groups": groups,
+                            "groups": groups_with_clips,
                         }
                     )
 

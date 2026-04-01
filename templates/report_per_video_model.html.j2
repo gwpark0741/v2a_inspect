@@ -15,16 +15,6 @@
   {% endfor %}
 </nav>
 
-<!-- Filmstrip -->
-<div class="filmstrip">
-  {% for frame in frames %}
-  <div>
-    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
-    <div class="frame-label">{{ frame.time }}s</div>
-  </div>
-  {% endfor %}
-</div>
-
 <!-- Prompt tabs -->
 {% if prompts | length > 1 %}
 <div class="repeat-tabs" style="margin-bottom:8px;">
@@ -57,55 +47,71 @@
 <div class="scene-block">
   <div class="scene-header">
     Scene {{ scene.index }} ({{ scene.start }}s — {{ scene.end }}s)
+  </div>
+  <div class="scene-content">
+    <div class="scene-text">
+      <div style="margin-bottom:8px;">
+        <span style="color:#6c757d;font-style:italic;">Background: </span>{{ scene.background }}
+        {% if scene.bg_group_id %}
+        <span class="group-tag">{{ scene.bg_group_id }}</span>
+        {% endif %}
+      </div>
+
+      {% if scene.events %}
+      {% for ev in scene.events %}
+      <div class="event">
+        <span style="color:#495057;font-weight:600;font-size:0.8rem;">{% if prompt.label == "object-based" %}Object{% else %}Event{% endif %} {{ loop.index0 }}: </span>
+        <strong>{{ ev.description }}</strong>
+        {% if ev.group_id %}
+        <span class="group-tag {% if ev.vlm_verified %}verified{% endif %}">{{ ev.group_id }}{% if ev.vlm_verified %} ✓{% endif %}</span>
+        {% endif %}
+        <br><span style="color:#868e96;">{{ ev.time_range }}</span>
+        {% if ev.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ ev.timestamps }}</span>{% endif %}
+      </div>
+      {% endfor %}
+      {% else %}
+      <div style="color:#adb5bd;font-style:italic;">No events detected</div>
+      {% endif %}
+    </div>
     {% if scene.clip_path %}
-    <video controls src="{{ scene.clip_path }}" style="float:right;"></video>
+    <div class="scene-video">
+      <video controls src="{{ scene.clip_path }}"></video>
+    </div>
     {% endif %}
   </div>
-
-  <div style="margin-bottom:8px;">
-    <span style="color:#6c757d;font-style:italic;">Background: </span>{{ scene.background }}
-    {% if scene.bg_group_id %}
-    <span class="group-tag">{{ scene.bg_group_id }}</span>
-    {% endif %}
-  </div>
-
-  {% if scene.events %}
-  {% for ev in scene.events %}
-  <div class="event">
-    <strong>{{ ev.description }}</strong>
-    {% if ev.group_id %}
-    <span class="group-tag {% if ev.vlm_verified %}verified{% endif %}">{{ ev.group_id }}{% if ev.vlm_verified %} ✓{% endif %}</span>
-    {% endif %}
-    <br><span style="color:#868e96;">{{ ev.time_range }}</span>
-    {% if ev.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ ev.timestamps }}</span>{% endif %}
-  </div>
-  {% endfor %}
-  {% else %}
-  <div style="color:#adb5bd;font-style:italic;">No events detected</div>
-  {% endif %}
 </div>
 {% endfor %}
 
-<!-- Sound Groups -->
+<!-- Sound Groups with clips -->
 {% if repeat.groups %}
 <div class="card" style="margin-top:16px;">
   <div class="card-header">🔗 Sound Groups</div>
-  <table>
-    <tr>
-      <th style="width:80px;">Group ID</th>
-      <th>Canonical Description</th>
-      <th style="width:160px;">Members</th>
-      <th style="width:80px;">VLM Verified</th>
-    </tr>
-    {% for g in repeat.groups %}
-    <tr>
-      <td><span class="group-tag {% if g.vlm_verified %}verified{% endif %}">{{ g.group_id }}</span></td>
-      <td>{{ g.canonical_description }}</td>
-      <td>{{ g.member_ids | join(", ") }}</td>
-      <td>{% if g.vlm_verified %}<span class="highlight highlight-green">Yes</span>{% else %}<span style="color:#adb5bd;">No</span>{% endif %}</td>
-    </tr>
-    {% endfor %}
-  </table>
+  {% for g in repeat.groups %}
+  <div class="group-block {% if g.member_ids[0] is defined and '_bg' in g.member_ids[0] %}group-bg{% endif %}">
+    <div class="group-header">
+      <span class="group-tag {% if g.vlm_verified %}verified{% endif %}">{{ g.group_id }}{% if g.vlm_verified %} ✓{% endif %}</span>
+      <strong>{{ g.canonical_description }}</strong>
+      <span style="color:#6c757d;font-size:0.8rem;margin-left:8px;">{{ g.member_ids | join(", ") }}</span>
+    </div>
+    {% if g.clips %}
+    <div class="group-clip-list">
+      {% for clip in g.clips %}
+      <div class="group-clip-row">
+        <div class="group-clip-index">{{ loop.index0 }}</div>
+        <div class="group-clip-video">
+          <video controls src="{{ clip.path }}"></video>
+          <div style="font-size:0.72rem;color:#6c757d;margin-top:2px;">{{ clip.track_id }} ({{ clip.start }}s–{{ clip.end }}s)</div>
+        </div>
+        <div class="group-clip-desc">
+          {{ clip.description }}
+          {% if clip.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ clip.timestamps }}</span>{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
 </div>
 {% endif %}
 
