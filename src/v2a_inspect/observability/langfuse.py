@@ -246,6 +246,27 @@ def fetch_chat_prompt(
     )
 
 
+def fetch_trace_cost(trace_id: str) -> dict[str, Any] | None:
+    """Fetch cost and token usage for a completed trace from Langfuse API."""
+    client = get_langfuse_client()
+    if client is None or not trace_id:
+        return None
+    try:
+        trace = client.api.trace.get(trace_id)
+        total_usage: dict[str, int] = {}
+        for obs in trace.observations:
+            if obs.usage_details:
+                for key, val in obs.usage_details.items():
+                    total_usage[key] = total_usage.get(key, 0) + val
+        return {
+            "total_cost": trace.total_cost,
+            "latency": trace.latency,
+            "usage_details": total_usage if total_usage else None,
+        }
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def flush_langfuse() -> None:
     client = get_langfuse_client()
     if client is not None:
