@@ -46,6 +46,37 @@ def _upload_and_wait(path: str, client: genai.Client) -> Any:
     return upload_video(client, path)
 
 
+def clip_and_extract_frames(
+    video_path: str,
+    start: float,
+    end: float,
+    fps: float,
+    *,
+    padding: float = 0.5,
+) -> list[tuple[float, str]]:
+    """Clip video segment and extract frames as base64 images (for OpenAI)."""
+    from v2a_inspect.experiment.frames import extract_frames
+    from v2a_inspect.observability import start_observation
+
+    clip_start = max(0.0, start - padding)
+    clip_end = end + padding
+
+    with start_observation(
+        name="openai.clip_and_extract_frames",
+        as_type="tool",
+        input={"start": clip_start, "end": clip_end, "fps": fps},
+    ) as obs:
+        tmp_path = _clip_to_temp(video_path, clip_start, clip_end)
+        try:
+            frames = extract_frames(tmp_path, fps=fps)
+        finally:
+            _cleanup(tmp_path)
+
+        if obs is not None:
+            obs.update(output={"frame_count": len(frames)})
+        return frames
+
+
 def _cleanup(path: str) -> None:
     try:
         os.unlink(path)

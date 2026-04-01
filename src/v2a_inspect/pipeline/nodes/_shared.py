@@ -26,8 +26,17 @@ def append_state_message(
 
 
 def get_scene_analysis_prompt(options: InspectOptions) -> ResolvedPrompt:
-    if options.scene_analysis_mode == "extended":
+    mode = options.scene_analysis_mode
+    if mode == "extended":
         return resolve_prompt("scene_analysis_extended")
+    if mode == "v2":
+        return resolve_prompt("scene_analysis_v2")
+    if mode == "v3":
+        return resolve_prompt("scene_analysis_v3")
+    if mode == "object_based":
+        return resolve_prompt("scene_analysis_object_based")
+    if mode == "constrained":
+        return resolve_prompt("scene_analysis_constrained")
     return resolve_prompt("scene_analysis_default")
 
 
@@ -59,6 +68,51 @@ def build_video_messages(
     return messages
 
 
+def build_frame_messages(
+    frames: list[tuple[float, str]],
+    *,
+    fps: float,
+    prompt: ResolvedPrompt,
+) -> list[BaseMessage]:
+    """Build messages with base64 frame images for OpenAI models."""
+    content_blocks: list[dict[str, Any]] = []
+
+    content_blocks.append(
+        {
+            "type": "text",
+            "text": (
+                f"Below are {len(frames)} frames extracted from a video at {fps} fps. "
+                f"Frame timestamps are shown in the order they appear.\n\n"
+            ),
+        }
+    )
+
+    for timestamp, b64_jpeg in frames:
+        content_blocks.append(
+            {
+                "type": "text",
+                "text": f"[Frame at {timestamp:.1f}s]",
+            }
+        )
+        content_blocks.append(
+            {
+                "type": "image_url",
+                "image_url": {
+                    "url": f"data:image/jpeg;base64,{b64_jpeg}",
+                    "detail": "low",
+                },
+            }
+        )
+
+    content_blocks.append({"type": "text", "text": f"\n{prompt.user_text}"})
+
+    messages: list[BaseMessage] = []
+    if prompt.system_text.strip():
+        messages.append(SystemMessage(content=prompt.system_text))
+    messages.append(HumanMessage(content=content_blocks))
+    return messages
+
+
 def build_invoke_kwargs(
     llm: BaseChatModel,
     *,
@@ -79,8 +133,10 @@ def build_invoke_kwargs(
         )
     if timeout_ms is not None:
         invoke_kwargs["timeout"] = timeout_ms / 1000
-    if max_retries is not None:
-        invoke_kwargs["max_retries"] = max(1, max_retries)
+    # max_retries is intentionally NOT passed here — it must be set at client
+    # init time (ChatOpenAI / ChatGoogleGenerativeAI constructor), not at
+    # invoke time.  Passing it to invoke() causes OpenAI's
+    # Completions.parse() to reject the unknown kwarg.
 
     return invoke_kwargs
 
@@ -112,7 +168,8 @@ def invoke_structured_text(
 def invoke_structured_video(
     llm: BaseChatModel,
     *,
-    file_obj: Any,
+    file_obj: Any = None,
+    frames: list[tuple[float, str]] | None = None,
     fps: float,
     prompt: ResolvedPrompt,
     schema: type[T],
@@ -122,9 +179,18 @@ def invoke_structured_video(
     label: str = "",
     config: RunnableConfig | None = None,
 ) -> T:
+    if file_obj is not None:
+        messages = build_video_messages(file_obj, fps=fps, prompt=prompt)
+    elif frames is not None:
+        messages = build_frame_messages(frames, fps=fps, prompt=prompt)
+    else:
+        raise ValueError(
+            "Either file_obj (Gemini) or frames (OpenAI) must be provided."
+        )
+
     return _invoke_structured(
         llm=llm,
-        messages=build_video_messages(file_obj, fps=fps, prompt=prompt),
+        messages=messages,
         prompt=prompt,
         schema=schema,
         model=model,

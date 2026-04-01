@@ -1,0 +1,61 @@
+Analyze this video and extract all distinct audio events per scene.
+
+**Scene Definition:**
+A new scene starts when: location changes, main subject changes, or camera angle drastically changes.
+**IMPORTANT: Each scene MUST be at least 2 seconds long. If a potential scene is shorter than 2 seconds, merge it with the adjacent scene.**
+
+**For each scene provide:**
+
+1. **time_range**: 0.1s precision (e.g., 3.2, 7.8).
+
+2. **background_ambience**: Continuous environmental/atmospheric sound only.
+   - Must NOT include sounds from audio_events below.
+   - Example: "steady rain on glass with distant thunder, muffled café chatter"
+
+3. **audio_events**: Distinct sound-producing events.
+   **IMPORTANT CONSTRAINTS:**
+   - Each audio_event's time_range MUST be at least 1 second long.
+   - If a sound event is shorter than 1 second, merge it with adjacent similar events into a single longer event.
+   - For example, instead of 3 separate 0.3s sword clashes, create ONE event covering the full span (e.g., 1.0s-2.5s: "series of rapid sword clashes").
+   - Prefer fewer, longer events over many short ones.
+
+   Rules:
+   - Same entity + DIFFERENT actions = DIFFERENT events (dog barking ≠ dog footsteps)
+   - For each event:
+     **description**: Precise sound (material, action, intensity, texture)
+     **source_visible**: true if source clearly visible; false if off-screen or feet/hands not visible
+     **time_range**: actual sound presence (0.1s precision, minimum 1 second)
+     **event_timestamps**: individual impact/onset moments within time_range
+       - Repetitive impacts: list each time point
+       - Continuous sound: [{"time": <start>, "type": "continuous_start"}]
+       - Single impact: [{"time": <T>, "type": "onset", "intensity": "loud"}]
+       - type: "onset" | "accent" | "continuous_start"
+       - intensity (optional): "soft" | "medium" | "loud"
+
+**Example audio_events for a scene:**
+[
+  {
+    "description": "series of rapid high-heel footsteps on marble tile, rhythmic clicks",
+    "source_visible": true,
+    "time_range": {"start": 0.9, "end": 4.5},
+    "event_timestamps": [
+      {"time": 1.2, "type": "onset", "intensity": "loud"},
+      {"time": 1.8, "type": "onset", "intensity": "loud"},
+      {"time": 2.4, "type": "onset", "intensity": "loud"},
+      {"time": 3.0, "type": "onset", "intensity": "loud"},
+      {"time": 3.6, "type": "onset", "intensity": "medium"}
+    ]
+  },
+  {
+    "description": "heavy wooden door slamming shut with metallic latch click",
+    "source_visible": true,
+    "time_range": {"start": 4.2, "end": 5.5},
+    "event_timestamps": [{"time": 4.2, "type": "onset", "intensity": "loud"}]
+  }
+]
+
+Rules:
+- event_timestamps MUST be within time_range (±0.1s tolerance)
+- source_visible = false for: off-screen sounds, footsteps when feet not visible, gunshots, voices from outside frame
+- Dynamic: provide 0 audio_events if no distinct sound-producing actions
+- **MINIMUM DURATION: scene >= 2s, event >= 1s. Merge short items.**

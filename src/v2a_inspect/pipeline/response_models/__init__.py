@@ -5,7 +5,14 @@ from .gemini import (
     ModelSelectResponse,
     VLMVerifyResponse,
 )
-from .scenes import AudioEvent, EventTimestamp, Scene, TimeRange, VideoSceneAnalysis
+from .scenes import (
+    AudioEvent,
+    EventTimestamp,
+    ObjectBasedVideoSceneAnalysis,
+    Scene,
+    TimeRange,
+    VideoSceneAnalysis,
+)
 from .tracks import GroupedAnalysis, ModelSelection, RawTrack, TrackGroup
 
 __all__ = [
@@ -14,6 +21,7 @@ __all__ = [
     "AudioEvent",
     "Scene",
     "VideoSceneAnalysis",
+    "ObjectBasedVideoSceneAnalysis",
     "GroupingResponseGroup",
     "GroupingResponse",
     "VLMVerifyResponse",

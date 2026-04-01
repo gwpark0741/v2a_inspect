@@ -1,0 +1,114 @@
+{% extends "report_base.html.j2" %}
+{% block title %}V2A Inspect — {{ model_name }}{% endblock %}
+{% block content %}
+<h1>{{ model_name }}</h1>
+<div class="meta">
+  <span>📅 {{ metadata.timestamp[:10] }}</span>
+</div>
+
+<nav>
+  <a href="../index.html">대시보드</a>
+  {% for m in all_models %}
+  <a href="{{ m.replace('/', '_') }}.html" {% if m == model_name %}class="active"{% endif %}>{{ m }}</a>
+  {% endfor %}
+</nav>
+
+<!-- Repeat tab navigation -->
+{% if repeat_count > 1 %}
+<div class="repeat-tabs">
+  {% for i in range(repeat_count) %}
+  <button class="repeat-tab {% if i == 0 %}active{% endif %}" data-repeat="{{ i }}" onclick="switchRepeat({{ i }})">
+    Run {{ i + 1 }}
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for video in videos %}
+<h2>📹 {{ video.name }} ({{ video.duration }}s)</h2>
+
+<!-- Filmstrip -->
+<div class="filmstrip">
+  {% for frame in video.frames %}
+  <div>
+    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
+    <div class="frame-label">{{ frame.time }}s</div>
+  </div>
+  {% endfor %}
+</div>
+
+{% for repeat in video.repeats %}
+<div class="repeat-panel" data-repeat="{{ repeat.repeat_index }}" {% if repeat.repeat_index != 0 %}style="display:none;"{% endif %}>
+
+<!-- Scene list -->
+{% for scene in repeat.scenes %}
+<div class="scene-block">
+  <div class="scene-header">
+    Scene {{ scene.index }} ({{ scene.start }}s — {{ scene.end }}s)
+    {% if scene.clip_path %}
+    <video controls src="{{ scene.clip_path }}" style="float:right;"></video>
+    {% endif %}
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <span style="color:#6c757d;font-style:italic;">Background: </span>{{ scene.background }}
+    {% if scene.bg_group_id %}
+    <span class="group-tag">{{ scene.bg_group_id }}</span>
+    {% endif %}
+  </div>
+
+  {% if scene.events %}
+  {% for ev in scene.events %}
+  <div class="event">
+    <strong>{{ ev.description }}</strong>
+    {% if ev.group_id %}
+    <span class="group-tag {% if ev.vlm_verified %}verified{% endif %}">{{ ev.group_id }}{% if ev.vlm_verified %} ✓{% endif %}</span>
+    {% endif %}
+    <br><span style="color:#868e96;">{{ ev.time_range }}</span>
+    {% if ev.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ ev.timestamps }}</span>{% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="color:#adb5bd;font-style:italic;">No events detected</div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- Sound Groups -->
+{% if repeat.groups %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-header">🔗 Sound Groups (Run {{ repeat.repeat_index + 1 }})</div>
+  <table>
+    <tr>
+      <th style="width:80px;">Group ID</th>
+      <th>Canonical Description</th>
+      <th style="width:160px;">Members</th>
+      <th style="width:80px;">VLM Verified</th>
+    </tr>
+    {% for g in repeat.groups %}
+    <tr>
+      <td><span class="group-tag {% if g.vlm_verified %}verified{% endif %}">{{ g.group_id }}</span></td>
+      <td>{{ g.canonical_description }}</td>
+      <td>{{ g.member_ids | join(", ") }}</td>
+      <td>{% if g.vlm_verified %}<span class="highlight highlight-green">Yes</span>{% else %}<span style="color:#adb5bd;">No</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+</div>
+{% endfor %}
+{% endfor %}
+
+<script>
+function switchRepeat(index) {
+  document.querySelectorAll('.repeat-tab').forEach(function(tab) {
+    tab.classList.toggle('active', parseInt(tab.dataset.repeat) === index);
+  });
+  document.querySelectorAll('.repeat-panel').forEach(function(panel) {
+    panel.style.display = parseInt(panel.dataset.repeat) === index ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

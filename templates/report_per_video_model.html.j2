@@ -1,0 +1,139 @@
+{% extends "report_base.html.j2" %}
+{% block title %}V2A Inspect — {{ video_name }} / {{ model_name }}{% endblock %}
+{% block content %}
+<h1>📹 {{ video_name }} — {{ model_name }}</h1>
+<div class="meta">
+  <span>📅 {{ metadata.timestamp[:10] }}</span>
+  <span>{{ duration }}s</span>
+</div>
+
+<nav>
+  <a href="../index.html">대시보드</a>
+  <a href="{{ video_name }}.html">{{ video_name }}</a>
+  {% for m in all_models %}
+  <a href="{{ video_name }}_{{ m.replace('/', '_') }}.html" {% if m == model_name %}class="active"{% endif %}>{{ m }}</a>
+  {% endfor %}
+</nav>
+
+<!-- Filmstrip -->
+<div class="filmstrip">
+  {% for frame in frames %}
+  <div>
+    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
+    <div class="frame-label">{{ frame.time }}s</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Prompt tabs -->
+{% if prompts | length > 1 %}
+<div class="repeat-tabs" style="margin-bottom:8px;">
+  {% for p in prompts %}
+  <button class="repeat-tab {% if loop.first %}active{% endif %}" data-prompt="{{ p.label }}" onclick="switchPrompt('{{ p.label }}')">
+    {{ p.label }}
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for prompt in prompts %}
+<div class="prompt-panel" data-prompt="{{ prompt.label }}" {% if not loop.first %}style="display:none;"{% endif %}>
+
+<!-- Run tabs per prompt -->
+{% if prompt.repeat_count > 1 %}
+<div class="repeat-tabs">
+  {% for i in range(prompt.repeat_count) %}
+  <button class="repeat-tab {% if i == 0 %}active{% endif %}" data-prompt="{{ prompt.label }}" data-repeat="{{ i }}" onclick="switchRepeat('{{ prompt.label }}', {{ i }})">
+    Run {{ i + 1 }}
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for repeat in prompt.repeats %}
+<div class="run-panel" data-prompt="{{ prompt.label }}" data-repeat="{{ repeat.repeat_index }}" {% if repeat.repeat_index != 0 %}style="display:none;"{% endif %}>
+
+{% for scene in repeat.scenes %}
+<div class="scene-block">
+  <div class="scene-header">
+    Scene {{ scene.index }} ({{ scene.start }}s — {{ scene.end }}s)
+    {% if scene.clip_path %}
+    <video controls src="{{ scene.clip_path }}" style="float:right;"></video>
+    {% endif %}
+  </div>
+
+  <div style="margin-bottom:8px;">
+    <span style="color:#6c757d;font-style:italic;">Background: </span>{{ scene.background }}
+    {% if scene.bg_group_id %}
+    <span class="group-tag">{{ scene.bg_group_id }}</span>
+    {% endif %}
+  </div>
+
+  {% if scene.events %}
+  {% for ev in scene.events %}
+  <div class="event">
+    <strong>{{ ev.description }}</strong>
+    {% if ev.group_id %}
+    <span class="group-tag {% if ev.vlm_verified %}verified{% endif %}">{{ ev.group_id }}{% if ev.vlm_verified %} ✓{% endif %}</span>
+    {% endif %}
+    <br><span style="color:#868e96;">{{ ev.time_range }}</span>
+    {% if ev.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ ev.timestamps }}</span>{% endif %}
+  </div>
+  {% endfor %}
+  {% else %}
+  <div style="color:#adb5bd;font-style:italic;">No events detected</div>
+  {% endif %}
+</div>
+{% endfor %}
+
+<!-- Sound Groups -->
+{% if repeat.groups %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-header">🔗 Sound Groups</div>
+  <table>
+    <tr>
+      <th style="width:80px;">Group ID</th>
+      <th>Canonical Description</th>
+      <th style="width:160px;">Members</th>
+      <th style="width:80px;">VLM Verified</th>
+    </tr>
+    {% for g in repeat.groups %}
+    <tr>
+      <td><span class="group-tag {% if g.vlm_verified %}verified{% endif %}">{{ g.group_id }}</span></td>
+      <td>{{ g.canonical_description }}</td>
+      <td>{{ g.member_ids | join(", ") }}</td>
+      <td>{% if g.vlm_verified %}<span class="highlight highlight-green">Yes</span>{% else %}<span style="color:#adb5bd;">No</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+</div>
+{% endfor %}
+
+</div>
+{% endfor %}
+
+<script>
+function switchPrompt(label) {
+  document.querySelectorAll('.repeat-tab[data-prompt]').forEach(function(tab) {
+    if (!tab.dataset.repeat) {
+      tab.classList.toggle('active', tab.dataset.prompt === label);
+    }
+  });
+  document.querySelectorAll('.prompt-panel').forEach(function(panel) {
+    panel.style.display = panel.dataset.prompt === label ? '' : 'none';
+  });
+}
+
+function switchRepeat(promptLabel, index) {
+  document.querySelectorAll('.repeat-tab[data-prompt="' + promptLabel + '"][data-repeat]').forEach(function(tab) {
+    tab.classList.toggle('active', parseInt(tab.dataset.repeat) === index);
+  });
+  document.querySelectorAll('.run-panel[data-prompt="' + promptLabel + '"]').forEach(function(panel) {
+    panel.style.display = parseInt(panel.dataset.repeat) === index ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

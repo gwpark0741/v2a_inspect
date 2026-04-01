@@ -1,0 +1,93 @@
+{% extends "report_base.html.j2" %}
+{% block title %}V2A Inspect — Experiment Dashboard{% endblock %}
+{% block content %}
+<h1>V2A Inspect 실험 리포트</h1>
+<div class="meta">
+  <span>📅 {{ metadata.timestamp[:10] }}</span>
+  <span>🎬 {{ videos | length }}개 영상</span>
+  <span>⚙️ fps={{ metadata.fps }} | temp={{ metadata.temperature }}</span>
+  {% if metadata.git_hash %}<span>🔗 {{ metadata.git_hash[:8] }}</span>{% endif %}
+</div>
+
+<nav>
+  <a href="index.html" class="active">대시보드</a>
+  {% for v in videos %}
+  <a href="per_video/{{ v.name }}.html">{{ v.name }}</a>
+  {% endfor %}
+</nav>
+
+<div class="card">
+  <div class="card-header">📊 모델별 요약 (prompt=event-v1)</div>
+  <table>
+    <tr>
+      <th>모델</th>
+      <th>Scenes (avg)</th>
+      <th>Events/Scene (avg)</th>
+      <th>Groups (avg)</th>
+      <th>Desc Length (avg)</th>
+      <th>Latency (avg)</th>
+      <th>Cost (avg)</th>
+      <th>Input Tokens (avg)</th>
+      <th>Output Tokens (avg)</th>
+      <th>Stability</th>
+      <th>Error Rate</th>
+    </tr>
+    {% for model_name, stats in model_summary.items() %}
+    <tr>
+      <td><strong><a href="per_model/{{ model_name.replace('/', '_') }}.html">{{ model_name }}</a></strong></td>
+      <td {% if stats.is_best_scenes %}class="best"{% endif %}>{{ "%.1f"|format(stats.avg_scenes) }}</td>
+      <td>{{ "%.1f"|format(stats.avg_events_per_scene) }}</td>
+      <td>{{ "%.1f"|format(stats.avg_groups) }}</td>
+      <td>{{ "%.0f"|format(stats.avg_desc_length) }} chars</td>
+      <td {% if stats.is_best_latency %}class="best"{% endif %}>{{ "%.1f"|format(stats.avg_latency) }}s</td>
+      <td {% if stats.is_best_cost %}class="best"{% endif %}>${{ "%.4f"|format(stats.avg_cost) }}</td>
+      <td>{{ "%.0f"|format(stats.avg_input_tokens) }}</td>
+      <td>{{ "%.0f"|format(stats.avg_output_tokens) }}</td>
+      <td {% if stats.stability >= 0.85 %}class="best"{% elif stats.stability < 0.7 %}class="worst"{% endif %}>{{ "%.0f"|format(stats.stability * 100) }}%</td>
+      <td {% if stats.error_rate > 0 %}class="worst"{% endif %}>{{ "%.0f"|format(stats.error_rate * 100) }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+{% if prompt_summary %}
+<div class="card">
+  <div class="card-header">📝 프롬프트별 요약 (model={{ best_model }})</div>
+  <table>
+    <tr>
+      <th>프롬프트</th>
+      <th>Scenes (avg)</th>
+      <th>Events/Scene (avg)</th>
+      <th>Desc Length (avg)</th>
+      <th>Latency (avg)</th>
+      <th>변경 내용</th>
+    </tr>
+    {% for label, stats in prompt_summary.items() %}
+    <tr>
+      <td><strong>{{ label }}</strong></td>
+      <td>{{ "%.1f"|format(stats.avg_scenes) }}</td>
+      <td>{{ "%.1f"|format(stats.avg_events_per_scene) }}</td>
+      <td>{{ "%.0f"|format(stats.avg_desc_length) }} chars</td>
+      <td>{{ "%.1f"|format(stats.avg_latency) }}s</td>
+      <td>{{ stats.change_description }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">🎬 영상별 상세</div>
+  <table>
+    <tr><th>영상</th><th>길이</th><th>결과 수</th><th>링크</th></tr>
+    {% for v in videos %}
+    <tr>
+      <td>{{ v.name }}</td>
+      <td>{{ v.duration }}s</td>
+      <td>{{ v.result_count }}</td>
+      <td><a href="per_video/{{ v.name }}.html">상세 보기 →</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

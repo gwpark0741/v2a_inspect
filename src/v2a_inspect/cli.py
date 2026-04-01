@@ -117,7 +117,7 @@ def _add_analyze_option_arguments(
     parser.add_argument("--fps", type=float, default=defaults.fps)
     parser.add_argument(
         "--scene-analysis-mode",
-        choices=("default", "extended"),
+        choices=("default", "extended", "v2", "v3"),
         default=defaults.scene_analysis_mode,
     )
     parser.add_argument(
@@ -161,7 +161,13 @@ def _add_common_runtime_arguments(
     *,
     defaults: InspectOptions,
 ) -> None:
-    parser.add_argument("--gemini-model", default=defaults.gemini_model)
+    parser.add_argument(
+        "--provider",
+        choices=["gemini", "openai"],
+        default=defaults.provider,
+        help="LLM provider (gemini or openai)",
+    )
+    parser.add_argument("--model", dest="model_name", default=defaults.model_name)
     parser.add_argument(
         "--upload-timeout-seconds",
         type=int,
@@ -308,11 +314,12 @@ def _run_ui_command(args: argparse.Namespace) -> int:
 
 def _build_analyze_options(args: argparse.Namespace) -> InspectOptions:
     return InspectOptions(
+        provider=args.provider,
+        model_name=args.model_name,
         fps=args.fps,
         scene_analysis_mode=args.scene_analysis_mode,
         enable_vlm_verify=args.enable_vlm_verify,
         enable_model_select=args.enable_model_select,
-        gemini_model=args.gemini_model,
         upload_timeout_seconds=args.upload_timeout_seconds,
         text_timeout_ms=args.text_timeout_ms,
         video_timeout_ms=args.video_timeout_ms,
@@ -327,7 +334,8 @@ def _build_group_options(args: argparse.Namespace) -> InspectOptions:
         scene_analysis_mode="default",
         enable_vlm_verify=args.enable_vlm_verify,
         enable_model_select=args.enable_model_select,
-        gemini_model=args.gemini_model,
+        provider=args.provider,
+        model_name=args.model_name,
         upload_timeout_seconds=args.upload_timeout_seconds,
         text_timeout_ms=args.text_timeout_ms,
         video_timeout_ms=args.video_timeout_ms,

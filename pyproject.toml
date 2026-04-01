@@ -21,11 +21,14 @@ dependencies = [
     "langchain>=1.2.12",
     "langfuse>=3.9.0",
     "langchain-google-genai>=4.0.0",
+    "langchain-openai>=0.3.0",
     "langgraph>=1.1.2",
     "moviepy>=2.2.1",
+    "Pillow>=11.0.0",
     "pydantic>=2.12.5",
     "pydantic-settings>=2.13.1",
     "pyyaml>=6.0.2",
+    "jinja2>=3.1.0",
     "streamlit>=1.55.0",
     "streamlit-authenticator>=0.4.2",
     "pyngrok>=7.2.0",
@@ -39,3 +42,10 @@ dev = [
     "pre-commit>=4.5.1",
     "ruff>=0.15.6",
 ]
+
+[tool.ty]
+rules.unknown-argument = "ignore"
+rules.no-matching-overload = "ignore"
+rules.unused-type-ignore-comment = "ignore"
+rules.invalid-argument-type = "ignore"
+rules.not-subscriptable = "ignore"

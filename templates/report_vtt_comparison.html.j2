@@ -1,0 +1,191 @@
+{% extends "report_base.html.j2" %}
+{% block title %}V2A Inspect — {{ page_title }}{% endblock %}
+{% block content %}
+<h1>{{ page_title }}</h1>
+<div class="meta">
+  <span>📅 {{ metadata.timestamp[:10] }}</span>
+  <span>{{ control_description }}</span>
+</div>
+
+<nav>
+  <a href="index.html">대시보드</a>
+  <a href="vtt_model_comparison.html" {% if experiment_id == "3A" %}class="active"{% endif %}>3A: 모델 비교</a>
+  <a href="vtt_prompt_comparison.html" {% if experiment_id == "3B" %}class="active"{% endif %}>3B: 프롬프트 비교</a>
+</nav>
+
+<!-- Variable control table -->
+<div class="card">
+  <div class="card-header">🔬 변인통제</div>
+  <table class="control-table">
+    <tr><th>독립변인</th><td>{{ independent_var }}</td></tr>
+    <tr><th>통제변인</th><td>{{ controlled_vars }}</td></tr>
+    <tr><th>반복 횟수</th><td>{{ repeats }}회/설정</td></tr>
+  </table>
+</div>
+
+<!-- Repeat tab navigation -->
+{% if repeat_count > 1 %}
+<div class="repeat-tabs">
+  {% for i in range(repeat_count) %}
+  <button class="repeat-tab {% if i == 0 %}active{% endif %}" data-repeat="{{ i }}" onclick="switchRepeat({{ i }})">
+    Run {{ i + 1 }}
+  </button>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% for video in videos %}
+<h2>📹 {{ video.name }} ({{ video.duration }}s)</h2>
+
+<!-- Filmstrip -->
+<div class="filmstrip">
+  {% for frame in video.frames %}
+  <div>
+    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
+    <div class="frame-label">{{ frame.time }}s</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Scene-by-scene comparison per repeat -->
+{% for repeat in video.repeats %}
+<div class="repeat-panel" data-repeat="{{ repeat.repeat_index }}" {% if repeat.repeat_index != 0 %}style="display:none;"{% endif %}>
+
+{% for scene in repeat.scenes %}
+<div class="scene-block">
+  <div class="scene-header">
+    Scene {{ scene.index }} ({{ scene.start }}s — {{ scene.end }}s)
+    {% if scene.clip_path %}
+    <video controls src="{{ scene.clip_path }}" style="float:right;"></video>
+    {% endif %}
+  </div>
+
+  <!-- Background ambience comparison -->
+  <h3>🌊 Background Ambience</h3>
+  <table>
+    <tr>
+      {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+    </tr>
+    <tr>
+      {% for col in columns %}
+      <td class="bg">
+        {{ scene.backgrounds[col] | default("—") }}
+        {% if scene.bg_group_ids[col] %}
+        <span class="group-tag">{{ scene.bg_group_ids[col] }}</span>
+        {% endif %}
+      </td>
+      {% endfor %}
+    </tr>
+  </table>
+
+  <!-- Audio events comparison -->
+  <h3>🔊 Audio Events</h3>
+  <div class="scene-row" style="grid-template-columns: repeat({{ columns|length }}, 1fr);">
+    {% for col in columns %}
+    <div class="scene-cell">
+      <div class="label">{{ col }} ({{ scene.events[col] | length }} events)</div>
+      {% for ev in scene.events[col] %}
+      <div class="event">
+        <strong>{{ ev.description[:80] }}</strong>
+        {% if ev.group_id %}
+        <span class="group-tag {% if ev.vlm_verified %}verified{% endif %}">{{ ev.group_id }}{% if ev.vlm_verified %} ✓{% endif %}</span>
+        {% endif %}
+        <br><span style="color:#868e96;">{{ ev.time_range }}</span>
+        {% if ev.timestamps %}<br><span style="color:#adb5bd;font-size:0.75rem;">timestamps: {{ ev.timestamps }}</span>{% endif %}
+      </div>
+      {% endfor %}
+      {% if not scene.events[col] %}
+      <div style="color:#adb5bd;font-style:italic;">No events detected</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endfor %}
+
+<!-- Sound Groups summary -->
+{% if repeat.groups %}
+<div class="card" style="margin-top:16px;">
+  <div class="card-header">🔗 Sound Groups (Run {{ repeat.repeat_index + 1 }})</div>
+  {% for col in columns %}
+  {% if repeat.groups[col] %}
+  <h3 style="margin:12px 0 6px;">{{ col }}</h3>
+  <table>
+    <tr>
+      <th style="width:80px;">Group ID</th>
+      <th>Canonical Description</th>
+      <th style="width:120px;">Members</th>
+      <th style="width:80px;">VLM Verified</th>
+    </tr>
+    {% for g in repeat.groups[col] %}
+    <tr>
+      <td><span class="group-tag {% if g.vlm_verified %}verified{% endif %}">{{ g.group_id }}</span></td>
+      <td>{{ g.canonical_description }}</td>
+      <td>{{ g.member_ids | join(", ") }}</td>
+      <td>{% if g.vlm_verified %}<span class="highlight highlight-green">Yes</span>{% else %}<span style="color:#adb5bd;">No</span>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endif %}
+  {% endfor %}
+</div>
+{% endif %}
+
+</div>
+{% endfor %}
+
+<!-- Auto metrics comparison -->
+<div class="card">
+  <div class="card-header">📊 자동 지표 — {{ video.name }}</div>
+  <table>
+    <tr>
+      <th>지표</th>
+      {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+    </tr>
+    {% for metric_name, metric_values in video.metrics.items() %}
+    <tr>
+      <td>{{ metric_name }}</td>
+      {% for col in columns %}
+      {% set val = metric_values[col] %}
+      <td {% if val.is_best %}class="best"{% elif val.is_worst %}class="worst"{% endif %}>
+        {{ val.display }}
+      </td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+
+<!-- Stability comparison -->
+{% if video.stability %}
+<div class="card">
+  <div class="card-header">🔄 안정성 ({{ repeats }}회 반복)</div>
+  <table>
+    <tr>
+      <th>지표</th>
+      {% for col in columns %}<th>{{ col }}</th>{% endfor %}
+    </tr>
+    {% for metric_name, metric_values in video.stability.items() %}
+    <tr>
+      <td>{{ metric_name }}</td>
+      {% for col in columns %}
+      <td>{{ metric_values[col] }}</td>
+      {% endfor %}
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endif %}
+{% endfor %}
+
+<script>
+function switchRepeat(index) {
+  document.querySelectorAll('.repeat-tab').forEach(function(tab) {
+    tab.classList.toggle('active', parseInt(tab.dataset.repeat) === index);
+  });
+  document.querySelectorAll('.repeat-panel').forEach(function(panel) {
+    panel.style.display = parseInt(panel.dataset.repeat) === index ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

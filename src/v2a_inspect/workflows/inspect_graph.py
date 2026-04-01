@@ -31,7 +31,8 @@ class InspectRuntime:
     """Runtime dependencies for the inspect workflow."""
 
     llm: BaseChatModel
-    genai_client: genai.Client
+    provider: Literal["gemini", "openai"] = "gemini"
+    genai_client: genai.Client | None = None
 
 
 def build_initial_inspect_state(
@@ -165,6 +166,16 @@ def _upload_node(
     )
 
 
+def _is_openai(state: InspectState) -> bool:
+    options = state.get("options")
+    return options is not None and options.provider == "openai"
+
+
+def _has_video_input(state: InspectState) -> bool:
+    """Check if video input is available (either gemini_file or video_frames)."""
+    return state.get("gemini_file") is not None or state.get("video_frames") is not None
+
+
 def _bootstrap_node(
     state: InspectState,
     config: RunnableConfig | None = None,
@@ -214,7 +225,7 @@ def _verify_node(
         lambda: verify_groups(
             state,
             llm=runtime.context.llm,
-            genai_client=runtime.context.genai_client,
+            genai_client=runtime.context.genai_client,  # None for OpenAI
             config=config,
         ),
     )
@@ -231,7 +242,7 @@ def _select_model_node(
         lambda: select_models(
             state,
             llm=runtime.context.llm,
-            genai_client=runtime.context.genai_client,
+            genai_client=runtime.context.genai_client,  # None for OpenAI
             config=config,
         ),
     )
@@ -265,13 +276,13 @@ def _route_after_bootstrap(
     state: InspectState,
 ) -> Literal["upload", "analyze", "extract"]:
     if state.get("scene_analysis") is not None:
-        if state.get("gemini_file") is not None:
+        if _has_video_input(state):
             return "extract"
         if _requires_video_context(state) and state.get("video_path"):
             return "upload"
         return "extract"
 
-    if state.get("gemini_file") is not None:
+    if _has_video_input(state):
         return "analyze"
     return "upload"
 
@@ -350,7 +361,8 @@ def _summarize_node_input(node_name: str, state: InspectState) -> dict[str, obje
                 {
                     "fps": options.fps,
                     "scene_analysis_mode": options.scene_analysis_mode,
-                    "gemini_model": options.gemini_model,
+                    "provider": options.provider,
+                    "model_name": options.model_name,
                 }
             )
     elif node_name == "extract":
@@ -360,7 +372,7 @@ def _summarize_node_input(node_name: str, state: InspectState) -> dict[str, obje
         base["raw_track_count"] = len(state.get("raw_tracks", []))
     elif node_name in {"verify", "select_model"}:
         base["candidate_group_count"] = _count_active_groups(state)
-        base["has_gemini_file"] = state.get("gemini_file") is not None
+        base["has_video_input"] = _has_video_input(state)
     else:
         base["state_keys"] = sorted(state.keys())
     return base

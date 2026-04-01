@@ -20,6 +20,10 @@ PromptName = Literal[
     "model_select",
     "scene_analysis_default",
     "scene_analysis_extended",
+    "scene_analysis_v2",
+    "scene_analysis_v3",
+    "scene_analysis_object_based",
+    "scene_analysis_constrained",
     "vlm_verify",
 ]
 
@@ -28,6 +32,8 @@ PROMPT_NAMES: tuple[PromptName, ...] = (
     "model_select",
     "scene_analysis_default",
     "scene_analysis_extended",
+    "scene_analysis_v2",
+    "scene_analysis_v3",
     "vlm_verify",
 )
 

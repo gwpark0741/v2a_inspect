@@ -17,17 +17,17 @@ from ._shared import (
     get_active_groups,
     invoke_structured_video,
 )
-from ._video import clip_and_upload
+from ._video import clip_and_extract_frames, clip_and_upload
 
 
 def select_models(
     state: InspectState,
     *,
     llm: BaseChatModel,
-    genai_client: genai.Client,
+    genai_client: genai.Client | None = None,
     config: RunnableConfig | None = None,
 ) -> dict[str, object]:
-    """Assign TTA or VTA to track groups using CoT reasoning."""
+    """Assign TTA or VTA to track groups using CoT reasoning (Gemini or OpenAI)."""
 
     options = state.get("options")
     if options is None:
@@ -49,10 +49,13 @@ def select_models(
             ),
         }
 
+    provider = options.provider
     gemini_file = state.get("gemini_file")
-    if gemini_file is None:
+    video_frames = state.get("video_frames")
+
+    if gemini_file is None and video_frames is None:
         warnings = append_state_message(
-            state, "warnings", "Skipped model selection: no Gemini file."
+            state, "warnings", "Skipped model selection: no video input."
         )
         return {
             "final_groups": groups,
@@ -84,34 +87,49 @@ def select_models(
         # Clip video to group range
         clip_start = min(t.start for t in member_tracks)
         clip_end = max(t.end for t in member_tracks)
-        if video_path:
-            try:
-                file_to_use = clip_and_upload(
-                    video_path, clip_start, clip_end, genai_client
-                )
-            except Exception as clip_exc:  # noqa: BLE001
-                warnings.append(f"Clip failed for {group.group_id}: {clip_exc}")
-                file_to_use = gemini_file
-        else:
-            file_to_use = gemini_file
 
         resolved_prompt = resolve_prompt("model_select").render(
             segment_list=build_model_select_segment_list(member_tracks)
         )
 
+        invoke_kwargs: dict = {
+            "fps": options.fps,
+            "prompt": resolved_prompt,
+            "schema": ModelSelectResponse,
+            "timeout_ms": options.video_timeout_ms,
+            "max_retries": options.max_retries,
+            "label": f"model_select_{group.group_id}",
+            "config": config,
+        }
+
+        if provider == "openai" and video_path:
+            try:
+                clip_frames = clip_and_extract_frames(
+                    video_path, clip_start, clip_end, options.fps
+                )
+                invoke_kwargs["frames"] = clip_frames
+            except Exception as clip_exc:  # noqa: BLE001
+                warnings.append(
+                    f"Frame extraction failed for {group.group_id}: {clip_exc}"
+                )
+                invoke_kwargs["frames"] = video_frames
+        elif video_path and genai_client is not None:
+            try:
+                file_to_use = clip_and_upload(
+                    video_path, clip_start, clip_end, genai_client
+                )
+                invoke_kwargs["file_obj"] = file_to_use
+            except Exception as clip_exc:  # noqa: BLE001
+                warnings.append(f"Clip failed for {group.group_id}: {clip_exc}")
+                invoke_kwargs["file_obj"] = gemini_file
+        else:
+            invoke_kwargs["file_obj"] = gemini_file
+
+        if provider == "gemini":
+            invoke_kwargs["model"] = options.model_name
+
         try:
-            response = invoke_structured_video(
-                llm,
-                file_obj=file_to_use,
-                fps=options.fps,
-                prompt=resolved_prompt,
-                schema=ModelSelectResponse,
-                model=options.gemini_model,
-                timeout_ms=options.video_timeout_ms,
-                max_retries=options.max_retries,
-                label=f"model_select_{group.group_id}",
-                config=config,
-            )
+            response = invoke_structured_video(llm, **invoke_kwargs)
         except Exception as exc:  # noqa: BLE001
             warnings.append(f"Model selection failed for {group.group_id}: {exc}")
             continue

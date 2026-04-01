@@ -10,7 +10,7 @@ import google.genai as genai
 
 from v2a_inspect.observability import start_observation
 
-DEFAULT_GEMINI_MODEL = "gemini-3-pro-preview"
+DEFAULT_GEMINI_MODEL = "gemini-3.1-pro-preview"
 DEFAULT_POLL_INTERVAL_SECONDS = 2.0
 
 

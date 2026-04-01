@@ -1,0 +1,50 @@
+{% extends "report_base.html.j2" %}
+{% block title %}V2A Inspect — {{ video_name }}{% endblock %}
+{% block content %}
+<h1>📹 {{ video_name }} ({{ duration }}s)</h1>
+<div class="meta">
+  <span>📅 {{ metadata.timestamp[:10] }}</span>
+</div>
+
+<nav>
+  <a href="../index.html">대시보드</a>
+  {% for v in all_videos %}
+  <a href="{{ v }}.html" {% if v == video_name %}class="active"{% endif %}>{{ v }}</a>
+  {% endfor %}
+</nav>
+
+<!-- Filmstrip -->
+<div class="filmstrip">
+  {% for frame in frames %}
+  <div>
+    <img src="{{ frame.path }}" alt="frame at {{ frame.time }}s">
+    <div class="frame-label">{{ frame.time }}s</div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Model summary table -->
+<div class="card">
+  <div class="card-header">📊 모델별 요약</div>
+  <table>
+    <tr>
+      <th>모델</th>
+      <th>Scenes (avg)</th>
+      <th>Events/Scene (avg)</th>
+      <th>Latency (avg)</th>
+      <th>Runs</th>
+      <th>상세</th>
+    </tr>
+    {% for m in models %}
+    <tr>
+      <td><strong>{{ m.name }}</strong></td>
+      <td>{{ "%.1f"|format(m.avg_scenes) }}</td>
+      <td>{{ "%.1f"|format(m.avg_events_per_scene) }}</td>
+      <td>{{ "%.1f"|format(m.avg_latency) }}s</td>
+      <td>{{ m.run_count }}</td>
+      <td><a href="{{ video_name }}_{{ m.safe_name }}.html">보기 →</a></td>
+    </tr>
+    {% endfor %}
+  </table>
+</div>
+{% endblock %}

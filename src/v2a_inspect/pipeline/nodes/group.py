@@ -54,7 +54,7 @@ def group_tracks(
             llm,
             prompt=resolved_prompt,
             schema=GroupingResponse,
-            model=options.gemini_model,
+            model=options.model_name,
             timeout_ms=options.text_timeout_ms,
             max_retries=options.max_retries,
             label="text_grouping",

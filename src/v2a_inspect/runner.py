@@ -132,8 +132,10 @@ def _run_workflow(
     resolved_graph = graph or build_inspect_graph()
     graph_runner = cast(Any, resolved_graph)
     resolved_runtime = runtime or build_inspect_runtime(
-        model=options.gemini_model,
+        provider=options.provider,
+        model=options.model_name,
         max_retries=options.max_retries,
+        temperature=options.temperature,
     )
     resolved_trace_context = trace_context or WorkflowTraceContext(
         source="runtime",
@@ -143,11 +145,12 @@ def _run_workflow(
     trace_metadata = {
         "source": resolved_trace_context.source,
         "operation": resolved_trace_context.operation,
+        "provider": options.provider,
+        "model_name": options.model_name,
         "scene_analysis_mode": options.scene_analysis_mode,
         "fps": options.fps,
         "enable_vlm_verify": options.enable_vlm_verify,
         "enable_model_select": options.enable_model_select,
-        "gemini_model": options.gemini_model,
         **resolved_trace_context.metadata,
     }
 
@@ -269,7 +272,8 @@ def _summarize_workflow_input(
         "scene_analysis_mode": options.scene_analysis_mode,
         "enable_vlm_verify": options.enable_vlm_verify,
         "enable_model_select": options.enable_model_select,
-        "gemini_model": options.gemini_model,
+        "provider": options.provider,
+        "model_name": options.model_name,
     }
 
 
