@@ -1,33 +1,53 @@
 # V2A Inspect
 
-## Project Structure
-This project consists of two parts. The AI inference server, and the main python module where the agent runtime exists.
+V2A Inspect turns a video into an editable sound timeline, routes each track to
+the appropriate audio model, and mixes the generated audio back into the video.
 
-### AI Inference Server
+## Entrypoints
 
-The server runtime that runs AI inference. Server code is in `server/`
+- `uv run v2a run VIDEO`: analyze a video and export a `VideoAsset` JSON.
+- `uv run v2a ui`: open the upload, timeline-editing, generation, and preview UI.
+- `uv run v2a synthesize`: generate audio from an exported asset or timeline.
+- `uv run --project server v2a-inspect-server serve`: run the inference API.
 
-#### Supported Models
+The commands are one-shot CLI/UI entrypoints. The sound-timeline inference stage
+uses LangGraph internally; it is not an interactive CLI loop.
 
-1. SAM3: Image segmentation and tracking with natural language prompts
-2. DINO v2: Image embedding generation
-3. SigLIP2: Image and text embedding generation (for simillarity search)
+## Local setup
 
-#### Code Structure
-- `models/`: Holds the API request and response models.
-- `inference/`: The AI model inference code
-- `runtime.py`: Entrypoint for `v2a-inspect-server` CLI command
-- `settings.py`: Pydantic setting config
-- `app.py`: FastAPI routes
+```bash
+cp .env.example .env
+uv sync --extra ui
+uv sync --project server
+```
 
+Add a Gemini API key to `.env`, then start the inference server and UI in
+separate terminals:
 
-### Agent Runtime
+```bash
+uv run --project server v2a-inspect-server serve
+uv run v2a ui
+```
 
-The agent runtime is where agentic video to multitrack audio pipeline runs. Code is in `src/`
+Open `http://127.0.0.1:8501`. The UI flow is:
 
-#### Code Structure
-- `client`: API client for the AI inference server. Designed to not depend on anything.
-- `config`: Pydantic setting config
-- `models`: Pydantic models used for data
-- `prompts`: Prompt manager for the agent. Includes prompts as .txt file that is embedded to the python module when built.
-- `preprocessing`: Preprocessing pipeline.
+1. Upload a video and run visual/agent inference.
+2. Edit sound tracks and events in the timeline.
+3. Generate routed audio.
+4. Play event/track audio or preview and download the mixed video.
+
+Speech tracks use Kokoro TTS and require `spoken_text`. SFX and ambience default
+to text-to-audio; use V2A only for sounds that require precise synchronization
+with visible motion. Kokoro downloads its model on the first speech request.
+
+## Packages
+
+- `src/v2a_inspect/`: main CLI, agent pipeline, editor API, and inference clients.
+- `web/`: React timeline editor.
+- `server/`: GPU inference API for SAM3, embeddings, Hunyuan V2A, and Kokoro TTS.
+- `tests/` and `server/tests/`: lightweight regression tests.
+- `scripts/run.sh`: batch wrapper around `v2a run`.
+
+Runtime media, generated outputs, virtual environments, and downloaded model
+weights are intentionally ignored by Git. Copy `.env.example` to `.env`; never
+commit real credentials.
